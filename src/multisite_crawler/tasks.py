@@ -10,9 +10,10 @@ from collections.abc import Callable
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from time import sleep
+from time import monotonic, sleep
 from typing import Protocol, TypeVar, cast
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 from redis import Redis
 
@@ -34,6 +35,12 @@ from multisite_crawler.locking import (
     RedisLease,
     RedisLeaseStore,
     source_lock_key,
+)
+from multisite_crawler.observability import (
+    RunContext,
+    RunEvent,
+    RunOutcome,
+    emit_run_event,
 )
 from multisite_crawler.queueing import create_celery_app
 
@@ -69,11 +76,25 @@ def run_with_source_lease[T](
     *,
     ttl_seconds: int = LOCK_TTL_SECONDS,
     renew_interval_seconds: float | None = None,
+    event_logger: logging.Logger | None = None,
+    task_id: str = "internal",
 ) -> T | LockOutcome:
     """Run one source operation only while its Redis lease is held."""
+    logger = event_logger or LOGGER
+    context = RunContext(source_id, uuid4(), task_id)
+    started_at = monotonic()
     lease = RedisLease(store, source_lock_key(source_id), ttl_seconds=ttl_seconds)
     if not lease.acquire():
         LOGGER.info("skipped_overlap source_id=%s", source_id)
+        emit_run_event(
+            logger,
+            RunEvent(
+                "run_skipped",
+                context,
+                RunOutcome.SKIPPED,
+                duration_seconds=monotonic() - started_at,
+            ),
+        )
         return LockOutcome.SKIPPED_OVERLAP
     heartbeat = LeaseHeartbeat(
         lease,
@@ -83,7 +104,29 @@ def run_with_source_lease[T](
     )
     heartbeat.start()
     try:
-        return operation()
+        result = operation()
+        emit_run_event(
+            logger,
+            RunEvent(
+                "run_finished",
+                context,
+                RunOutcome.SUCCEEDED,
+                duration_seconds=monotonic() - started_at,
+            ),
+        )
+        return result
+    except BaseException as error:
+        emit_run_event(
+            logger,
+            RunEvent(
+                "run_failed",
+                context,
+                RunOutcome.FAILED,
+                duration_seconds=monotonic() - started_at,
+                exception=error,
+            ),
+        )
+        raise
     finally:
         heartbeat.stop()
         lease.release()

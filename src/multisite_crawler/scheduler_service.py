@@ -7,13 +7,20 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from time import sleep
+from time import monotonic, sleep
 from typing import cast
+from uuid import uuid4
 
 from redis import Redis
 
 from multisite_crawler.config import CrawlerConfig, QueueName, load_config
 from multisite_crawler.database import beijing_now
+from multisite_crawler.observability import (
+    RunContext,
+    RunEvent,
+    RunOutcome,
+    emit_run_event,
+)
 from multisite_crawler.scheduler import SchedulerService, SchedulerStore
 from multisite_crawler.tasks import run_browser_task, run_http_task
 
@@ -47,15 +54,30 @@ def configured_sources(config: CrawlerConfig) -> list[ScheduledSource]:
 
 
 def run_cycle(
-    service: SchedulerService, sources: list[ScheduledSource], current: datetime
+    service: SchedulerService,
+    sources: list[ScheduledSource],
+    current: datetime,
+    *,
+    event_logger: logging.Logger | None = None,
 ) -> list[SchedulerCycleFailure]:
     """Dispatch due sources while returning source-scoped failures explicitly."""
+    logger = event_logger or LOGGER
     failures: list[SchedulerCycleFailure] = []
     for source in sources:
+        started_at = monotonic()
         try:
             service.tick(source.source_id, current)
         except Exception as error:
-            LOGGER.exception("scheduler tick failed for source_id=%s", source.source_id)
+            emit_run_event(
+                logger,
+                RunEvent(
+                    "scheduler_tick_failed",
+                    RunContext(source.source_id, uuid4(), "scheduler"),
+                    RunOutcome.FAILED,
+                    duration_seconds=monotonic() - started_at,
+                    exception=error,
+                ),
+            )
             failures.append(SchedulerCycleFailure(source.source_id, error))
     return failures
 

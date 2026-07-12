@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +24,7 @@ from multisite_crawler.browser_worker import (
     browser_worker_argv,
     validate_browser_runtime_settings,
 )
+from multisite_crawler.observability import JsonEventFormatter
 from multisite_crawler.queueing import create_celery_app
 from multisite_crawler.tasks import (
     LockOutcome,
@@ -29,6 +32,7 @@ from multisite_crawler.tasks import (
     record_browser_session_observation,
     run_browser_operation,
     run_browser_runtime_probe,
+    run_with_source_lease,
 )
 
 
@@ -72,6 +76,16 @@ class FakeRuntime:
         return operation(object())
 
 
+class CapturingHandler(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.messages: list[str] = []
+        self.setFormatter(JsonEventFormatter())
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(self.format(record))
+
+
 def test_browser_operation_uses_the_existing_source_lease() -> None:
     store = MemoryRedis()
     runtime = FakeRuntime()
@@ -79,6 +93,33 @@ def test_browser_operation_uses_the_existing_source_lease() -> None:
     assert run_browser_operation("demo", lambda page: "ok", runtime, store) == "ok"
     assert runtime.calls == 1
     assert store.values == {}
+
+
+def test_source_lease_emits_traceable_safe_run_event() -> None:
+    store = MemoryRedis()
+    logger = logging.getLogger("test.source_lease")
+    logger.handlers.clear()
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    handler = CapturingHandler()
+    logger.addHandler(handler)
+
+    assert (
+        run_with_source_lease(
+            store,
+            "demo",
+            lambda: "ok",
+            event_logger=logger,
+            task_id="task-local",
+        )
+        == "ok"
+    )
+
+    payload = json.loads(handler.messages[-1])
+    assert payload["source_id"] == "demo"
+    assert payload["task_id"] == "task-local"
+    assert payload["outcome"] == "succeeded"
+    assert "crawl_run_id" in payload
 
 
 def test_browser_operation_skips_when_the_existing_source_lease_is_held() -> None:

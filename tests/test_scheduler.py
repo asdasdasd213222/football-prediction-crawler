@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from datetime import datetime, timedelta
 
 from multisite_crawler.config import (
@@ -11,13 +13,28 @@ from multisite_crawler.config import (
     SourceConfig,
     SourceMode,
 )
+from multisite_crawler.observability import JsonEventFormatter
 from multisite_crawler.scheduler import (
     SchedulerService,
     SchedulerState,
     next_run_at,
     should_dispatch,
 )
-from multisite_crawler.scheduler_service import configured_sources, run_cycle
+from multisite_crawler.scheduler_service import (
+    ScheduledSource,
+    configured_sources,
+    run_cycle,
+)
+
+
+class CapturingHandler(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.messages: list[str] = []
+        self.setFormatter(JsonEventFormatter())
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(self.format(record))
 
 
 def test_next_run_uses_beijing_local_time() -> None:
@@ -218,3 +235,30 @@ def test_failed_source_dispatch_does_not_block_other_sources() -> None:
 
     assert dispatched == ["healthy-source"]
     assert [failure.source_id for failure in failures] == ["stuck-source"]
+
+
+def test_scheduler_failure_emits_safe_traceable_event() -> None:
+    class FailingService:
+        def tick(self, source_id: str, current: datetime) -> None:
+            del source_id, current
+            raise RuntimeError("token=must-not-be-logged")
+
+    logger = logging.getLogger("test.scheduler")
+    logger.handlers.clear()
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    handler = CapturingHandler()
+    logger.addHandler(handler)
+
+    failures = run_cycle(
+        FailingService(),
+        [ScheduledSource("stuck_source", 60, QueueName.HTTP)],
+        datetime(2026, 7, 12, 11, 0, 0),
+        event_logger=logger,
+    )
+
+    assert [failure.source_id for failure in failures] == ["stuck_source"]
+    payload = json.loads(handler.messages[-1])
+    assert payload["source_id"] == "stuck_source"
+    assert payload["outcome"] == "failed"
+    assert "token=must-not-be-logged" not in handler.messages[-1]

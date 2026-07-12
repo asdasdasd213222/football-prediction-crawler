@@ -1,6 +1,15 @@
 # Multi-Site Crawler
 
 Foundation repository for a production-grade multi-site data collection system.
+
+## Observability
+
+P5 emits structured JSON run events with `source_id`, `crawl_run_id`, and
+`task_id`. Event details are recursively redacted; exception messages, URL
+queries, credentials, cookies, tokens, authorization values, account data, and
+personal data are not written. By default logs go to standard output. To use
+rotating files, set `LOG_FILE_DIR` to an existing or creatable directory outside
+this repository, then configure `LOG_MAX_BYTES` and `LOG_BACKUP_COUNT`.
 It currently provides project tooling, strict source configuration, PostgreSQL
 persistence foundations, adapter contracts, Redis task queues, and local
 Beijing-time scheduling. It does not implement real-site collection,
