@@ -80,6 +80,7 @@ class CrawlRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     record_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    snapshot_path: Mapped[str | None] = mapped_column(String(1024))
 
 
 class SourceFetchState(Base):

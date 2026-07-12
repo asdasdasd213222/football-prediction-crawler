@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime
+from threading import Thread
+from urllib.error import HTTPError
+from urllib.request import urlopen
 from uuid import UUID
 
-from multisite_crawler.metrics import RedisMetricsStore, render_prometheus
+from multisite_crawler.metrics import (
+    MetricsSnapshot,
+    RedisMetricsStore,
+    render_prometheus,
+)
+from multisite_crawler.metrics_service import create_metrics_server
 from multisite_crawler.observability import RunOutcome
 from multisite_crawler.queueing import QueueDepths
 
@@ -73,3 +81,29 @@ def test_prometheus_output_has_required_metrics_and_bounded_labels() -> None:
         assert metric in rendered
     assert str(run_id) not in rendered
     assert "https://" not in rendered
+
+
+def test_metrics_server_exposes_only_loopback_metrics_path() -> None:
+    server = create_metrics_server(
+        "127.0.0.1",
+        0,
+        lambda: MetricsSnapshot({}, QueueDepths(http=0, browser=0)),
+    )
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host, port = server.server_address[:2]
+    try:
+        with urlopen(f"http://{host}:{port}/metrics") as response:
+            body = response.read().decode("utf-8")
+            assert response.status == 200
+        assert "crawler_queue_depth" in body
+        try:
+            urlopen(f"http://{host}:{port}/other")
+        except HTTPError as error:
+            assert error.code == 404
+        else:
+            raise AssertionError("non-metrics route must return 404")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()

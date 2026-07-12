@@ -10,6 +10,13 @@ queries, credentials, cookies, tokens, authorization values, account data, and
 personal data are not written. By default logs go to standard output. To use
 rotating files, set `LOG_FILE_DIR` to an existing or creatable directory outside
 this repository, then configure `LOG_MAX_BYTES` and `LOG_BACKUP_COUNT`.
+
+P5 metrics are exposed only from `http://127.0.0.1:9464/metrics`; the service
+returns `404` for every other path. Alert rule templates live in
+`configs/prometheus/alerts.yml` and local runbooks in `docs/operations/`. P5
+failure snapshots are redacted JSON artifacts in an external
+`FAILURE_SNAPSHOT_DIR`; set their size and retention through the matching
+environment variables. Snapshots are never served by the metrics endpoint.
 It currently provides project tooling, strict source configuration, PostgreSQL
 persistence foundations, adapter contracts, Redis task queues, and local
 Beijing-time scheduling. It does not implement real-site collection,

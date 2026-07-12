@@ -73,6 +73,13 @@ def test_models_use_postgresql_jsonb_and_beijing_timestamp_columns() -> None:
     assert Record.__table__.c.updated_at.type.timezone is False
 
 
+def test_crawl_run_model_has_nullable_snapshot_path() -> None:
+    column = CrawlRun.__table__.c.snapshot_path
+
+    assert column.type.length == 1024
+    assert column.nullable is True
+
+
 def test_records_define_source_external_id_uniqueness() -> None:
     constraints = [
         constraint
@@ -124,10 +131,15 @@ def test_initial_migration_upgrades_downgrades_and_upgrades_again() -> None:
 
     command.downgrade(config, "-1")
     assert "sources" in inspect(engine).get_table_names()
-    assert "source_fetch_states" not in inspect(engine).get_table_names()
+    assert "source_fetch_states" in inspect(engine).get_table_names()
+    assert "snapshot_path" not in {
+        column["name"] for column in inspect(engine).get_columns("crawl_runs")
+    }
 
     command.upgrade(config, "head")
-    assert "records" in inspect(engine).get_table_names()
+    assert "snapshot_path" in {
+        column["name"] for column in inspect(engine).get_columns("crawl_runs")
+    }
 
 
 @pytest.mark.integration
@@ -139,17 +151,36 @@ def test_change_detection_migration_is_reversible() -> None:
     config = Config(str(Path("alembic.ini")))
     config.set_main_option("sqlalchemy.url", database_url)
     command.upgrade(config, "head")
-
     engine = create_engine(database_url)
     assert "source_fetch_states" in inspect(engine).get_table_names()
     assert {"last_seen_at", "missing_count"} <= {
         column["name"] for column in inspect(engine).get_columns("records")
     }
 
-    command.downgrade(config, "-1")
+    command.downgrade(config, "20260711_01")
     assert "source_fetch_states" not in inspect(engine).get_table_names()
 
     command.upgrade(config, "head")
+
+
+@pytest.mark.integration
+def test_snapshot_path_migration_is_reversible() -> None:
+    database_url = os.environ.get("TEST_DATABASE_URL")
+    if database_url is None:
+        pytest.skip("TEST_DATABASE_URL is required for PostgreSQL migration tests")
+
+    config = Config(str(Path("alembic.ini")))
+    config.set_main_option("sqlalchemy.url", database_url)
+    command.upgrade(config, "head")
+    engine = create_engine(database_url)
+    assert "snapshot_path" in {
+        column["name"] for column in inspect(engine).get_columns("crawl_runs")
+    }
+
+    command.downgrade(config, "-1")
+    assert "snapshot_path" not in {
+        column["name"] for column in inspect(engine).get_columns("crawl_runs")
+    }
 
 
 @pytest.mark.integration

@@ -1,0 +1,31 @@
+groups:
+  - name: multisite-crawler
+    rules:
+      - alert: CrawlerConsecutiveFailures
+        expr: crawler_run_failed_total >= 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          runbook: docs/operations/observability.md#run-failures
+      - alert: CrawlerNoRecentSuccess
+        expr: time() - crawler_last_success_timestamp > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          runbook: docs/operations/observability.md#run-failures
+      - alert: CrawlerQueueBacklog
+        expr: crawler_queue_depth >= 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          runbook: docs/operations/observability.md#queue-backlog
+      - alert: CrawlerDependencyDown
+        expr: crawler_circuit_breaker_state == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          runbook: docs/operations/observability.md#dependencies
