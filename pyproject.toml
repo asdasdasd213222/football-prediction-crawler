@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multisite-crawler"
+version = "0.1.0"
+description = "Production-grade foundation for multi-site data collection."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.13,<2",
+    "celery>=5.4,<6",
+    "pydantic>=2.8,<3",
+    "psycopg[binary]>=3.2,<4",
+    "PyYAML>=6.0,<7",
+    "redis>=5.0,<6",
+    "SQLAlchemy>=2.0,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "ruff>=0.6",
+    "types-PyYAML>=6.0",
+]
+browser = [
+    "playwright>=1.46,<2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -p no:cacheprovider --basetemp .pytest_work"
+markers = [
+    "integration: requires a disposable PostgreSQL database",
+]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = ["src"]
+strict = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = [".pytest_runtime", ".pytest_tmp"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

@@ -1,0 +1,41 @@
+sources:
+  - id: demo_api
+    name: Demo API
+    enabled: true
+    mode: polling
+    interval_seconds: 60
+    queue: http
+    request:
+      url: https://example.invalid/api/items
+      method: GET
+      timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      base_delay_seconds: 2
+      max_delay_seconds: 30
+    rate_limit:
+      max_requests: 60
+      window_seconds: 60
+    circuit_breaker:
+      failure_threshold: 5
+      recovery_seconds: 600
+  - id: demo_browser
+    name: Demo Browser Source
+    enabled: true
+    mode: polling
+    interval_seconds: 60
+    queue: browser
+    request:
+      url: https://example.invalid/browser/items
+      method: GET
+      timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      base_delay_seconds: 2
+      max_delay_seconds: 30
+    rate_limit:
+      max_requests: 60
+      window_seconds: 60
+    circuit_breaker:
+      failure_threshold: 5
+      recovery_seconds: 600

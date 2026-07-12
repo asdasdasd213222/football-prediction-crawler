@@ -1,0 +1,42 @@
+name: multisite-crawler
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  worker-http:
+    build: ./src
+    working_dir: /app
+    command: ["celery", "-A", "multisite_crawler.tasks", "worker", "-Q", "http", "--loglevel=INFO"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+  scheduler:
+    build: ./src
+    command: ["python", "-m", "multisite_crawler.scheduler_service"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      SCHEDULER_CONFIG_PATH: /app/configs/sources.example.yaml
+    volumes:
+      - ./configs:/app/configs:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+  quality:
+    image: python:3.12-slim
+    working_dir: /workspace
+    command: ["python", "--version"]
+
+volumes:
+  redis-data:

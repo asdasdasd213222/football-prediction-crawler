@@ -1,0 +1,38 @@
+# Python environments and bytecode
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Tool caches and test artefacts
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.pytest_tmp/
+.pytest_*/
+.pytest_work/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artefacts
+build/
+dist/
+*.egg-info/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+browser-profiles/
+browser-failure-snapshots/
+
+# Local editor and worktree state
+.idea/
+.vscode/
+.worktrees/
+worktrees/
