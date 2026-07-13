@@ -53,6 +53,21 @@ docker compose config
 Compose is for local development and acceptance checks only. It must not be
 used to deploy a production environment.
 
+## Deployment Operations
+
+P6 provides a local Compose stack for Redis, PostgreSQL, migrations, the HTTP
+worker, and the scheduler. The dedicated Edge worker remains a constrained
+Windows-host service and is never containerized with its local profile. See
+`docs/operations/deployment.md` for CI, immutable image publishing, human
+promotion approval, health-gated rollback, and host Edge recovery. See
+`docs/operations/backup-recovery.md` for local backup and recovery exercises.
+
+Start a fresh local stack, including a rebuild of the application image, with:
+
+```powershell
+docker compose up --build -d
+```
+
 ## Source Configuration
 
 Use `configs/sources.example.yaml` as a non-sensitive reference for one or more

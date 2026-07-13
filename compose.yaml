@@ -1,9 +1,24 @@
 name: multisite-crawler
 
+x-app-environment: &app-environment
+  REDIS_URL: redis://redis:6379/0
+  DATABASE_URL: postgresql+psycopg://crawler:local_dev_only@postgres:5432/crawler
+  LOG_LEVEL: INFO
+
+x-app-resources: &app-resources
+  limits:
+    cpus: "1.0"
+    memory: 512M
+
+x-app-image: &app-image
+  image: multisite-crawler:local
+  build: .
+
 services:
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
     volumes:
       - redis-data:/data
     ports:
@@ -13,30 +28,70 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-  worker-http:
-    build: ./src
-    working_dir: /app
-    command: ["celery", "-A", "multisite_crawler.tasks", "worker", "-Q", "http", "--loglevel=INFO"]
+    deploy:
+      resources: *app-resources
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      REDIS_URL: redis://redis:6379/0
+      POSTGRES_USER: crawler
+      POSTGRES_PASSWORD: local_dev_only
+      POSTGRES_DB: crawler
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:54329:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crawler -d crawler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: *app-resources
+
+  migration:
+    <<: *app-image
+    command: ["alembic", "upgrade", "head"]
+    environment: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  worker-http:
+    <<: *app-image
+    command: ["celery", "-A", "multisite_crawler.tasks", "worker", "-Q", "http", "--loglevel=INFO"]
+    environment: *app-environment
+    restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    deploy:
+      resources: *app-resources
+
   scheduler:
-    build: ./src
+    <<: *app-image
     command: ["python", "-m", "multisite_crawler.scheduler_service"]
     environment:
-      REDIS_URL: redis://redis:6379/0
+      <<: *app-environment
       SCHEDULER_CONFIG_PATH: /app/configs/sources.example.yaml
-    volumes:
-      - ./configs:/app/configs:ro
+    restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    deploy:
+      resources: *app-resources
+
   quality:
     image: python:3.12-slim
     working_dir: /workspace
     command: ["python", "--version"]
 
 volumes:
+  postgres-data:
   redis-data:

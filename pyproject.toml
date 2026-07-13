@@ -34,7 +34,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra -p no:cacheprovider --basetemp .pytest_current"
+addopts = "-ra -p no:cacheprovider --basetemp .pytest_run"
 markers = [
     "integration: requires a disposable PostgreSQL database",
 ]

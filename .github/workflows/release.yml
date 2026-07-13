@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable image SHA tag to promote.
+        required: true
+        type: string
+      promote:
+        description: Request a reviewed production promotion.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      adapter_version: ${{ steps.version.outputs.adapter_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: image
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - id: version
+        run: echo "adapter_version=$(python -c \"from pathlib import Path; print('demo-api-v1' if Path('src/multisite_crawler/adapters/demo_api.py').exists() else 'none')\")" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image.outputs.image }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.adapter_version }}
+
+  promote:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions:
+      contents: read
+    steps:
+      - name: Require reviewed health target
+        env:
+          DEPLOY_HEALTH_URL: ${{ secrets.DEPLOY_HEALTH_URL }}
+        run: |
+          test -n "$DEPLOY_HEALTH_URL"
+          curl --fail --silent --show-error --max-time 15 "$DEPLOY_HEALTH_URL"
+      - name: Record reviewed deployment version
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${{ inputs.image_tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "adapter_version=review-required" >> "$GITHUB_STEP_SUMMARY"

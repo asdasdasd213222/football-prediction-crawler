@@ -1,9 +1,13 @@
 .git
+.env
+.env.*
+!.env.example
 .venv
 .mypy_cache
 .pytest_cache
 .pytest_tmp
 .pytest_runtime
+.pytest_*
 .ruff_cache
 __pycache__
 *.pyc
