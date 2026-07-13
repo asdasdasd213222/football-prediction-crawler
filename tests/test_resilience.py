@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from socket import gaierror
+
+import pytest
+
 from multisite_crawler.resilience import (
     CircuitBreaker,
     FixedWindowRateLimiter,
@@ -17,6 +21,25 @@ def test_retry_policy_retries_transient_failures_with_bounded_jitter() -> None:
     assert policy.should_retry(status_code=503, error=None) is True
     assert policy.should_retry(status_code=None, error=ConnectionResetError()) is True
     assert policy.delay_seconds(2, random_value=0.5) == 4
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error"),
+    [
+        (429, None),
+        (502, None),
+        (503, None),
+        (None, ConnectionResetError()),
+        (None, TimeoutError()),
+        (None, gaierror()),
+    ],
+)
+def test_retry_policy_covers_required_transient_http_and_network_failures(
+    status_code: int | None, error: Exception | None
+) -> None:
+    policy = RetryPolicy(max_attempts=3, base_delay_seconds=2, max_delay_seconds=30)
+
+    assert policy.should_retry(status_code=status_code, error=error) is True
 
 
 def test_retry_policy_does_not_retry_access_denials_and_honors_retry_after() -> None:

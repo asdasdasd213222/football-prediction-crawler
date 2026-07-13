@@ -15,7 +15,7 @@ def test_compose_defines_local_database_migration_and_host_edge_boundary() -> No
     assert "worker-browser" not in services
     assert services["postgres"]["healthcheck"]["test"] == [
         "CMD-SHELL",
-        "pg_isready -U crawler -d crawler",
+        "pg_isready -U crawler_owner -d crawler",
     ]
     assert services["migration"]["command"] == ["alembic", "upgrade", "head"]
     for name in ("redis", "postgres", "worker-http", "scheduler"):
@@ -43,6 +43,32 @@ def test_compose_binds_development_ports_to_loopback_only() -> None:
     assert compose["services"]["postgres"]["ports"] == ["127.0.0.1:54329:5432"]
 
 
+def test_compose_restricts_the_data_plane_and_separates_database_roles() -> None:
+    compose = yaml.safe_load(Path("compose.yaml").read_text(encoding="utf-8"))
+    services = compose["services"]
+    role_sql = Path("configs/postgres/init/10-create-application-role.sql").read_text(
+        encoding="utf-8"
+    )
+
+    assert compose["networks"]["crawler-internal"]["internal"] is True
+    for service_name in ("redis", "postgres", "migration", "worker-http", "scheduler"):
+        assert services[service_name]["networks"] == ["crawler-internal"]
+    assert "crawler_app" in compose["x-app-environment"]["DATABASE_URL"]
+    assert "crawler_owner" in compose["x-migration-environment"]["DATABASE_URL"]
+    assert services["migration"]["environment"] == compose["x-migration-environment"]
+    assert services["postgres"]["healthcheck"]["test"] == [
+        "CMD-SHELL",
+        "pg_isready -U crawler_owner -d crawler",
+    ]
+    for contract in (
+        "CREATE ROLE crawler_app",
+        "NOSUPERUSER",
+        "REVOKE CREATE ON SCHEMA public FROM PUBLIC",
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO crawler_app",
+    ):
+        assert contract in role_sql
+
+
 def test_application_image_keeps_non_secret_runtime_configuration() -> None:
     dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
     dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
@@ -50,3 +76,10 @@ def test_application_image_keeps_non_secret_runtime_configuration() -> None:
     assert "COPY . ." in dockerfile
     assert "configs" not in dockerignore
     assert ".env" in dockerignore
+
+
+def test_application_image_uses_an_unprivileged_runtime_user() -> None:
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+
+    assert "useradd --create-home --uid 10001 crawler" in dockerfile
+    assert dockerfile.rstrip().endswith("USER crawler")

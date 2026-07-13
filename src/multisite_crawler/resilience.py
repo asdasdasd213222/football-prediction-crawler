@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from socket import gaierror
 from typing import Protocol
 
 
@@ -22,7 +23,9 @@ class RetryPolicy:
     def should_retry(self, *, status_code: int | None, error: Exception | None) -> bool:
         if status_code in {401, 403}:
             return False
-        return status_code in {429, 502, 503} or isinstance(error, ConnectionError)
+        return status_code in {429, 502, 503} or isinstance(
+            error, (ConnectionError, TimeoutError, gaierror)
+        )
 
     def delay_seconds(self, attempt: int, *, random_value: float) -> float:
         delay = float(
@@ -70,7 +73,7 @@ def run_with_retry[T](
                 if delay is not None
                 else policy.delay_seconds(attempt, random_value=random_value())
             )
-        except ConnectionError:
+        except (ConnectionError, TimeoutError, gaierror):
             if attempt == policy.max_attempts:
                 raise
             sleep_seconds(policy.delay_seconds(attempt, random_value=random_value()))

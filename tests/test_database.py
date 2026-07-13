@@ -10,9 +10,9 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import UniqueConstraint, create_engine, inspect, select
+from sqlalchemy import UniqueConstraint, create_engine, inspect, select, text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from multisite_crawler.adapters.base import AdapterResult, CrawlItem, FetchResult
 from multisite_crawler.database import (
@@ -323,3 +323,18 @@ def test_record_source_external_id_pair_cannot_be_inserted_twice() -> None:
         with pytest.raises(IntegrityError):
             session.commit()
         session.rollback()
+
+
+@pytest.mark.integration
+def test_application_database_role_cannot_create_schema_objects() -> None:
+    database_url = os.environ.get("TEST_APPLICATION_DATABASE_URL")
+    if database_url is None:
+        pytest.skip("TEST_APPLICATION_DATABASE_URL is required for role tests")
+    engine = create_engine(database_url)
+
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT 1")).scalar_one() == 1
+        with pytest.raises(SQLAlchemyError):
+            connection.execute(
+                text("CREATE TABLE p8_application_role_denied (id integer)")
+            )

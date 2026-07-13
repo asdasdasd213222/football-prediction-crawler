@@ -34,6 +34,10 @@ def test_demo_api_adapter_handles_empty_invalid_and_http_failures() -> None:
         server.state.mode = "500"
         with pytest.raises(FetchError):
             AdapterRunner(DemoApiAdapter(server.url)).run()
+        for mode in ("502", "503"):
+            server.state.mode = mode
+            with pytest.raises(FetchError):
+                AdapterRunner(DemoApiAdapter(server.url)).run()
 
 
 @pytest.mark.integration
