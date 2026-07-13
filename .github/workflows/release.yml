@@ -31,7 +31,12 @@ jobs:
       - id: image
         run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
       - id: version
-        run: echo "adapter_version=$(python -c \"from pathlib import Path; print('demo-api-v1' if Path('src/multisite_crawler/adapters/demo_api.py').exists() else 'none')\")" >> "$GITHUB_OUTPUT"
+        run: |
+          if test -f src/multisite_crawler/adapters/demo_api.py; then
+            echo "adapter_version=demo-api-v1" >> "$GITHUB_OUTPUT"
+          else
+            echo "adapter_version=none" >> "$GITHUB_OUTPUT"
+          fi
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
