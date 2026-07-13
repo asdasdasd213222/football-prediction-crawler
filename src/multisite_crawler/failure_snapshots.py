@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
+from multisite_crawler.models import CrawlRun
 from multisite_crawler.observability import redact_value
 
 _SOURCE_ID = re.compile(r"^[a-z0-9_-]+$")
@@ -86,6 +87,11 @@ def cleanup_expired_snapshots(
             candidate.unlink()
             removed += 1
     return removed
+
+
+def attach_snapshot_path(crawl_run: CrawlRun, artifact: SnapshotArtifact) -> None:
+    """Associate an already-written private artifact with a transactional crawl run."""
+    crawl_run.snapshot_path = str(artifact.response_path)
 
 
 def _external_root(root: Path, repository_root: Path) -> Path:

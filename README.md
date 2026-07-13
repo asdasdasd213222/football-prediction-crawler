@@ -17,6 +17,8 @@ returns `404` for every other path. Alert rule templates live in
 failure snapshots are redacted JSON artifacts in an external
 `FAILURE_SNAPSHOT_DIR`; set their size and retention through the matching
 environment variables. Snapshots are never served by the metrics endpoint.
+The `configs/grafana/crawler-overview.json` template renders per-source success
+rate and last-success time from the low-cardinality Prometheus metrics.
 It currently provides project tooling, strict source configuration, PostgreSQL
 persistence foundations, adapter contracts, Redis task queues, and local
 Beijing-time scheduling. It does not implement real-site collection,

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable
-from datetime import datetime
+from collections.abc import Callable, Mapping
+from datetime import datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 from time import monotonic, sleep
@@ -31,6 +31,7 @@ from multisite_crawler.browser_session import (
     BrowserSessionObservation,
     BrowserSessionState,
 )
+from multisite_crawler.failure_snapshots import cleanup_expired_snapshots
 from multisite_crawler.locking import (
     LeaseHeartbeat,
     RedisLease,
@@ -230,6 +231,31 @@ def _record_terminal_metric(
     )
 
 
+def cleanup_failure_snapshots_from_environment(
+    environ: Mapping[str, str],
+    *,
+    repository_root: Path,
+    current: datetime,
+) -> int:
+    """Remove expired private snapshots using validated non-secret settings."""
+    raw_root = environ.get("FAILURE_SNAPSHOT_DIR", "").strip()
+    if not raw_root:
+        raise ValueError("FAILURE_SNAPSHOT_DIR is required")
+    try:
+        retention_days = int(environ.get("FAILURE_SNAPSHOT_RETENTION_DAYS", ""))
+    except ValueError as error:
+        raise ValueError(
+            "FAILURE_SNAPSHOT_RETENTION_DAYS must be an integer"
+        ) from error
+    if retention_days <= 0:
+        raise ValueError("FAILURE_SNAPSHOT_RETENTION_DAYS must be positive")
+    return cleanup_expired_snapshots(
+        Path(raw_root),
+        cutoff=current - timedelta(days=retention_days),
+        repository_root=repository_root,
+    )
+
+
 def _browser_runtime(
     playwright_factory: Callable[[], PlaywrightGateway] | None = None,
     settings: BrowserRuntimeSettings | None = None,
@@ -330,3 +356,16 @@ def run_lock_probe_task(self: object, source_id: str, seconds: int) -> str:
         operation,
     )
     return str(result)
+
+
+@celery_app.task(bind=True, acks_late=True)
+def cleanup_failure_snapshots_task(self: object) -> str:
+    """Run private failure-snapshot retention cleanup on the HTTP worker queue."""
+    del self
+    return str(
+        cleanup_failure_snapshots_from_environment(
+            os.environ,
+            repository_root=Path(__file__).resolve().parents[2],
+            current=datetime.now(BEIJING),
+        )
+    )

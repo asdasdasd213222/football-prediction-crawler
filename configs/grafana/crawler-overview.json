@@ -1,0 +1,23 @@
+{
+  "title": "Crawler Overview",
+  "panels": [
+    {
+      "title": "Success Rate By Source",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (source_id) (rate(crawler_run_total{outcome=\"succeeded\"}[15m])) / clamp_min(sum by (source_id) (rate(crawler_run_total[15m])), 1)"
+        }
+      ]
+    },
+    {
+      "title": "Last Success By Source",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "crawler_last_success_timestamp"
+        }
+      ]
+    }
+  ]
+}

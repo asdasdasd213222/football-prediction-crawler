@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, TypeVar
 
-from multisite_crawler.browser_artifacts import BrowserArtifactWriter
+from multisite_crawler.browser_artifacts import BrowserArtifactWriter, RedactedPng
 
 
 class BrowserRuntimeConfigurationError(ValueError):
@@ -18,10 +18,18 @@ class BrowserRuntimeConfigurationError(ValueError):
 class BrowserOperationError(RuntimeError):
     """An adapter failure that may include a safe fragment for diagnostics."""
 
-    def __init__(self, message: str, *, source_id: str, safe_html: str) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        source_id: str,
+        safe_html: str,
+        redacted_png: RedactedPng | None = None,
+    ) -> None:
         super().__init__(message)
         self.source_id = source_id
         self.safe_html = safe_html
+        self.redacted_png = redacted_png
 
 
 T = TypeVar("T")
@@ -198,7 +206,7 @@ class ManagedEdgeRuntime:
         self._artifact_writer.write_failure(
             source_id=error.source_id,
             safe_html=error.safe_html,
-            screenshot=None,
+            screenshot=error.redacted_png,
         )
 
     @staticmethod

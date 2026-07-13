@@ -33,6 +33,13 @@ class BrowserFailureArtifact:
     screenshot_path: Path | None
 
 
+@dataclass(frozen=True)
+class RedactedPng:
+    """An adapter-confirmed redacted PNG safe to persist as a failure artifact."""
+
+    content: bytes
+
+
 class BrowserArtifactWriter:
     """Persist redacted browser artifacts from adapter-supplied safe fragments."""
 
@@ -45,16 +52,29 @@ class BrowserArtifactWriter:
         *,
         source_id: str,
         safe_html: str | None,
-        screenshot: bytes | None,
+        screenshot: RedactedPng | object | None,
     ) -> BrowserFailureArtifact:
-        del screenshot
         self._validate_source_id(source_id)
         fragment = self._validate_safe_html(safe_html)
         sanitized_html = _SafeFragmentSanitizer.sanitize(fragment)
         artifact_id = uuid4().hex
         html_path = self._output_dir / f"{source_id}_{artifact_id}.html"
         html_path.write_text(sanitized_html, encoding="utf-8")
-        return BrowserFailureArtifact(html_path=html_path, screenshot_path=None)
+        screenshot_path = self._write_redacted_png(source_id, artifact_id, screenshot)
+        return BrowserFailureArtifact(
+            html_path=html_path, screenshot_path=screenshot_path
+        )
+
+    def _write_redacted_png(
+        self, source_id: str, artifact_id: str, screenshot: RedactedPng | object | None
+    ) -> Path | None:
+        if not isinstance(screenshot, RedactedPng):
+            return None
+        if not screenshot.content.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise ValueError("redacted screenshot must be a PNG")
+        screenshot_path = self._output_dir / f"{source_id}_{artifact_id}.png"
+        screenshot_path.write_bytes(screenshot.content)
+        return screenshot_path
 
     @staticmethod
     def _validate_source_id(source_id: str) -> None:

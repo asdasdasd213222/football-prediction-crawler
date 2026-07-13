@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from multisite_crawler.browser_artifacts import BrowserArtifactWriter
+from multisite_crawler.browser_artifacts import BrowserArtifactWriter, RedactedPng
 
 
 def test_artifact_writer_rejects_full_page_html(tmp_path: Path) -> None:
@@ -49,6 +49,17 @@ def test_artifact_writer_does_not_persist_screenshots(tmp_path: Path) -> None:
     )
 
     assert artifact.screenshot_path is None
+
+
+def test_artifact_writer_persists_only_explicit_redacted_png(tmp_path: Path) -> None:
+    artifact = BrowserArtifactWriter(tmp_path).write_failure(
+        source_id="demo",
+        safe_html="<table><tr><td>ok</td></tr></table>",
+        screenshot=RedactedPng(b"\x89PNG\r\n\x1a\nredacted"),
+    )
+
+    assert artifact.screenshot_path is not None
+    assert artifact.screenshot_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_artifact_writer_rejects_trailing_non_table_content(tmp_path: Path) -> None:
