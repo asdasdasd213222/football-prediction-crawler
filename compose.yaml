@@ -2,7 +2,11 @@ name: multisite-crawler
 
 x-app-environment: &app-environment
   REDIS_URL: redis://redis:6379/0
-  DATABASE_URL: postgresql+psycopg://crawler:local_dev_only@postgres:5432/crawler
+  DATABASE_URL: postgresql+psycopg://crawler_app:local_app_only@postgres:5432/crawler
+  LOG_LEVEL: INFO
+
+x-migration-environment: &migration-environment
+  DATABASE_URL: postgresql+psycopg://crawler_owner:local_owner_only@postgres:5432/crawler
   LOG_LEVEL: INFO
 
 x-app-resources: &app-resources
@@ -30,34 +34,38 @@ services:
       retries: 10
     deploy:
       resources: *app-resources
+    networks: [crawler-internal]
 
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: crawler
-      POSTGRES_PASSWORD: local_dev_only
+      POSTGRES_USER: crawler_owner
+      POSTGRES_PASSWORD: local_owner_only
       POSTGRES_DB: crawler
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./configs/postgres/init/10-create-application-role.sql:/docker-entrypoint-initdb.d/10-create-application-role.sql:ro
     ports:
       - "127.0.0.1:54329:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U crawler -d crawler"]
+      test: ["CMD-SHELL", "pg_isready -U crawler_owner -d crawler"]
       interval: 5s
       timeout: 3s
       retries: 10
     deploy:
       resources: *app-resources
+    networks: [crawler-internal]
 
   migration:
     <<: *app-image
     command: ["alembic", "upgrade", "head"]
-    environment: *app-environment
+    environment: *migration-environment
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
+    networks: [crawler-internal]
 
   worker-http:
     <<: *app-image
@@ -71,6 +79,7 @@ services:
         condition: service_completed_successfully
     deploy:
       resources: *app-resources
+    networks: [crawler-internal]
 
   scheduler:
     <<: *app-image
@@ -86,6 +95,7 @@ services:
         condition: service_completed_successfully
     deploy:
       resources: *app-resources
+    networks: [crawler-internal]
 
   quality:
     image: python:3.12-slim
@@ -95,3 +105,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+
+networks:
+  crawler-internal:
+    internal: true

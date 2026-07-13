@@ -16,6 +16,9 @@ def test_ci_runs_required_quality_migration_build_and_security_gates() -> None:
         "docker build",
         "pip-audit",
         "gitleaks",
+        "aquasecurity/trivy-action@v0.36.0",
+        "scan-type: image",
+        "image-ref: multisite-crawler:ci",
     ):
         assert command in workflow
 

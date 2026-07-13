@@ -33,8 +33,8 @@ class MockCrawlerServer:
                     self.send_header("Retry-After", "7")
                     self.end_headers()
                     return
-                if state.mode == "500":
-                    self.send_response(500)
+                if state.mode in {"500", "502", "503"}:
+                    self.send_response(int(state.mode))
                     self.end_headers()
                     return
                 if self.headers.get("If-None-Match") == state.etag:

@@ -14,3 +14,16 @@ def test_backup_and_restore_scripts_require_local_database_and_external_paths() 
         assert "outside the repository" in script
         assert "pg_dump" in backup
         assert "pg_restore" in restore
+
+
+def test_backup_security_check_rejects_repository_and_broad_acl_paths() -> None:
+    script = Path("scripts/verify_backup_security.ps1").read_text(encoding="utf-8")
+
+    for contract in (
+        "outside the repository root",
+        "Get-Acl",
+        "Everyone",
+        "BUILTIN\\Users",
+        "backup_security_verified=true",
+    ):
+        assert contract in script
