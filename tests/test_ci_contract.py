@@ -42,3 +42,26 @@ def test_release_uses_immutable_image_tags_and_guarded_promotion() -> None:
         assert contract in workflow
 
     assert ":latest" not in workflow
+
+
+def test_daily_inspection_uses_only_safe_read_only_inputs_and_issue_permission() -> (
+    None
+):
+    workflow = Path(".github/workflows/daily-inspection.yml").read_text(
+        encoding="utf-8"
+    )
+
+    for contract in (
+        'cron: "17 0 * * *"',
+        "contents: read",
+        "issues: write",
+        "vars.INSPECTION_REPORT_URL",
+        "--proto '=https'",
+        "python -m multisite_crawler.inspection",
+        "gh issue create",
+        "gh issue comment",
+    ):
+        assert contract in workflow
+
+    assert "secrets." not in workflow
+    assert "deploy" not in workflow.lower()

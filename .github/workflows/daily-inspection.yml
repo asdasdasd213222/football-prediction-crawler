@@ -1,0 +1,62 @@
+name: Daily Inspection
+
+on:
+  schedule:
+    - cron: "17 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      INSPECTION_REPORT_URL: ${{ vars.INSPECTION_REPORT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Fetch non-secret health report
+        id: input
+        shell: bash
+        run: |
+          if [ -z "$INSPECTION_REPORT_URL" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Daily inspection is not configured: set INSPECTION_REPORT_URL to an approved read-only HTTPS endpoint." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          case "$INSPECTION_REPORT_URL" in
+            https://*) ;;
+            *) echo "INSPECTION_REPORT_URL must use HTTPS" >&2; exit 1 ;;
+          esac
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 --max-time 20 "$INSPECTION_REPORT_URL" --output "$RUNNER_TEMP/health-report.json"
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+      - name: Build read-only inspection report
+        id: report
+        if: steps.input.outputs.configured == 'true'
+        shell: bash
+        run: |
+          python -m multisite_crawler.inspection \
+            --input "$RUNNER_TEMP/health-report.json" \
+            --output "$RUNNER_TEMP/daily-inspection.json" \
+            --markdown-output "$RUNNER_TEMP/daily-inspection.md"
+          cat "$RUNNER_TEMP/daily-inspection.md" >> "$GITHUB_STEP_SUMMARY"
+          status=$(python -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "$RUNNER_TEMP/daily-inspection.json")
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - name: Open or update an action-required issue
+        if: steps.report.outputs.status == 'attention'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          title="Crawler daily inspection requires review"
+          issue_number=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number')
+          if [ -z "$issue_number" ]; then
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/daily-inspection.md"
+          else
+            gh issue comment "$issue_number" --body-file "$RUNNER_TEMP/daily-inspection.md"
+          fi

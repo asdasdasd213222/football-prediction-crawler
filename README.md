@@ -19,6 +19,11 @@ failure snapshots are redacted JSON artifacts in an external
 environment variables. Snapshots are never served by the metrics endpoint.
 The `configs/grafana/crawler-overview.json` template renders per-source success
 rate and last-success time from the low-cardinality Prometheus metrics.
+P7 adds versioned repository skills at `.agents/skills/crawler-adapter/` and
+`.agents/skills/crawler-repair/`, plus a daily GitHub Actions inspection that
+consumes only a non-secret aggregate health report. It can open or update an
+issue for an actionable anomaly, but it cannot merge or deploy. See
+`docs/operations/daily-inspection.md` for the strict input contract and setup.
 It currently provides project tooling, strict source configuration, PostgreSQL
 persistence foundations, adapter contracts, Redis task queues, and local
 Beijing-time scheduling. It does not implement real-site collection,
