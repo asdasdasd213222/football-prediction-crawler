@@ -32,7 +32,13 @@ def test_p8_uses_a_reproducible_five_minute_local_reliability_baseline() -> None
 def test_p8_production_release_stays_human_gated_and_source_specific() -> None:
     todo = Path("TODO.md").read_text(encoding="utf-8")
     source_card = Path("docs/sources/sporttery_zqspf.md").read_text(encoding="utf-8")
+    intake = Path("docs/operations/source-approval-intake.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "不授权 Codex 进行生产迁移、\n> 部署或启用任何真实网站" in todo
     assert "robots" in source_card
     assert "remains **not approved**" in source_card
+    assert "does not constitute source operator or" in source_card
+    assert "Source-side authorization" in intake
+    assert "Do not send or commit authorization documents, passwords, cookies" in intake

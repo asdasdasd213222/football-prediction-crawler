@@ -391,6 +391,11 @@ sources:
 > Codex 浏览器监控仅用于人工观察和验收，不是项目的长期数据通道。浏览器作为传输
 > 方式不替代 robots、条款、授权范围或允许频率的站点复核。
 > 设计见 `docs/superpowers/specs/2026-07-11-browser-first-edge-data-pipeline-design.md`。
+>
+> **授权边界澄清（2026-07-13）**：项目负责人允许操作电脑、仓库、专用 Edge
+> 或可见页面，不等于来源运营方或权利人允许自动化采集。真实来源启用前，必须按
+> `docs/operations/source-approval-intake.md` 提供非敏感的来源方授权、robots 指引和
+> 允许频率确认；无法提供或结论不明确时，P3-04 保持阻塞。
 
 ### `sporttery_zqspf` 前置条件
 
@@ -793,6 +798,9 @@ sources:
 - [x] 日志和快照脱敏检查。
 - [x] 备份访问权限检查。
 - [ ] 所有真实网站完成授权和条款确认。
+
+> 本项目目前只有 `sporttery_zqspf` 候选来源。该项不由项目负责人操作许可、
+> 专用 Edge 登录态或本地 P8 验收替代；其 P3-04 前置确认仍未完成。
 
 ---
 

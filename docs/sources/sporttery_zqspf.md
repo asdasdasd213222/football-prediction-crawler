@@ -4,8 +4,10 @@
 
 - **Website:** China Sports Lottery / 中国竞彩网
 - **Target URL:** `https://www.sporttery.cn/jc/jsq/zqspf/index.html`
-- **User authorization:** The project owner confirmed authorization to collect
-  public, permitted content on 2026-07-11.
+- **Project owner consent:** The project owner authorized the project team to
+  operate this repository and its dedicated browser workflow on 2026-07-11.
+  This does not constitute source operator or rights-holder authorization for
+  automated collection.
 - **Scope:** Public竞彩足球足球胜平负与让球胜平负赛事和奖金信息 only.
 
 ## Collection Design
@@ -20,8 +22,8 @@
 - **Login:** The owner may manually authenticate the dedicated external Edge
   profile when the approved source workflow requires it. P4-02 governs that
   profile; the system does not automate login or extract its session data.
-- **Rendering:** Browser-monitored rendering is selected because the required
-  source data is available through the authorized visible page workflow.
+- **Rendering:** Browser-monitored rendering is the proposed transport for the
+  visible page workflow. It does not establish source authorization.
 - **Rate limit:** No published numeric limit identified. Use the configured
   per-source limiter and the 60-second minimum until written limits are found.
 
@@ -45,8 +47,8 @@
 
 - **Terms:** The published user agreement states that site content may not be
   copied or used for derivative works without prior authorization from the
-  operator or rights holder. The project owner supplied authorization; preserve
-  its external record outside Git and request renewed review if scope changes.
+  operator or rights holder. Project owner consent is not evidence of that
+  source-side authorization.
 - **robots.txt:** Automatic retrieval did not return a readable policy during
   this review. This remains a blocking manual verification point before the
   source-specific P3-04 Adapter is enabled.
@@ -58,6 +60,17 @@
   accepted. The `sporttery_zqspf` Adapter remains **not approved** until robots
   guidance, the external authorization record, and the approved cadence are
   reconfirmed.
+
+## P3-04 Approval Intake
+
+P3-04 remains blocked until every item in
+`docs/operations/source-approval-intake.md` has a non-sensitive human
+confirmation. The confirmation must establish the source operator or
+rights-holder position, not merely project owner consent.
+
+Do not place authorization documents, account details, cookies, tokens, or a
+browser profile in Git. Store any underlying authorization record outside the
+repository and provide only its reference, issuer, scope, and review date.
 
 ## Alert Thresholds
 
