@@ -39,6 +39,6 @@ def test_p8_production_release_stays_human_gated_and_source_specific() -> None:
     assert "不授权 Codex 进行生产迁移、\n> 部署或启用任何真实网站" in todo
     assert "robots" in source_card
     assert "remains **not approved**" in source_card
-    assert "does not constitute source operator or" in source_card
-    assert "Source-side authorization" in intake
+    assert "Public-visible page monitoring only" in source_card
+    assert "Public-visible page scope" in intake
     assert "Do not send or commit authorization documents, passwords, cookies" in intake

@@ -8,20 +8,22 @@
   operate this repository and its dedicated browser workflow on 2026-07-11.
   This does not constitute source operator or rights-holder authorization for
   automated collection.
+- **Collection mode:** Public-visible page monitoring only. It must not log in,
+  read session material, inspect network traffic, or call hidden APIs.
 - **Scope:** Public竞彩足球足球胜平负与让球胜平负赛事和奖金信息 only.
 
 ## Collection Design
 
 - **Expected update frequency:** Poll no faster than every 60 seconds; do not
   assume a faster cadence without a documented source limit.
-- **Selected acquisition method:** The project's dedicated, authorized Edge
+- **Selected acquisition method:** The project's dedicated no-login Edge
   browser monitor is the sole planned input for this source. The monitor reads
-  the visible source table after one permitted refresh; it does not inspect
-  cookies, network traffic, hidden APIs, or a user's daily browser session.
-  Direct HTTP collection is not planned for this source.
-- **Login:** The owner may manually authenticate the dedicated external Edge
-  profile when the approved source workflow requires it. P4-02 governs that
-  profile; the system does not automate login or extract its session data.
+  the visible source table after one permitted user-equivalent page refresh; it
+  does not inspect cookies, network traffic, hidden APIs, or a user's daily
+  browser session. Direct HTTP collection is not planned for this source.
+- **Login:** Public-visible mode does not log in. A login prompt, CAPTCHA,
+  access-control prompt, or account-only content stops collection and requires
+  a new source review; P4-02 does not make those prompts permissible.
 - **Rendering:** Browser-monitored rendering is the proposed transport for the
   visible page workflow. It does not establish source authorization.
 - **Rate limit:** No published numeric limit identified. Use the configured
@@ -48,7 +50,8 @@
 - **Terms:** The published user agreement states that site content may not be
   copied or used for derivative works without prior authorization from the
   operator or rights holder. Project owner consent is not evidence of that
-  source-side authorization.
+  source-side authorization. Therefore this source needs an external
+  authorization record before public-visible monitoring can be enabled.
 - **robots.txt:** Automatic retrieval did not return a readable policy during
   this review. This remains a blocking manual verification point before the
   source-specific P3-04 Adapter is enabled.
@@ -65,8 +68,9 @@
 
 P3-04 remains blocked until every item in
 `docs/operations/source-approval-intake.md` has a non-sensitive human
-confirmation. The confirmation must establish the source operator or
-rights-holder position, not merely project owner consent.
+confirmation. For a source whose published terms and robots guidance clearly
+permit public-visible monitoring, an external authorization record is not
+required. This source's current terms record requires one.
 
 Do not place authorization documents, account details, cookies, tokens, or a
 browser profile in Git. Store any underlying authorization record outside the

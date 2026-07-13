@@ -15,15 +15,19 @@ login, CAPTCHA, robots guidance, rate limits, or access controls.
 ## Decision
 
 The project will run a dedicated local Microsoft Edge worker for browser-only
-sources. For a source that can only be obtained from its authorized visible
-browser workflow, this project-owned monitor is the durable data transport.
+sources. Its default is public-visible monitoring: a no-login, user-equivalent
+page refresh that reads only configured visible fields. It does not inspect
+cookies, network traffic, hidden APIs, or a user's daily browser session. For a
+source that permits this visible workflow, the project-owned monitor is the
+durable data transport.
 The existing Codex browser monitor remains an observation and acceptance aid;
 it is not the project's production transport or durable data store.
 
-The worker will launch Edge with a dedicated, user-supplied profile directory
-outside the repository. The profile is manually authenticated by an authorized
-operator. No worker attaches to an everyday Edge window, extracts cookies, or
-copies session material.
+The worker will launch Edge with a dedicated no-login profile directory outside
+the repository. No worker attaches to an everyday Edge window, extracts
+cookies, or copies session material. Manual login is a separate P4-02 feature
+for a future source that has independently passed its source review; it is not
+part of the public-visible monitoring mode.
 
 ## Data Flow
 
@@ -50,9 +54,9 @@ Git.
   executable-path configuration; it does not attach over CDP to a user window.
 - `BROWSER_USER_DATA_DIR` identifies a dedicated local profile directory and is
   required only by the browser worker. It is ignored by Git and is never logged.
-- An operator stops the worker, opens that dedicated profile, completes any
-  authorized manual login, closes Edge, and restarts the worker. The system
-  records only the profile refresh time, never its contents.
+- Public-visible monitoring never performs a login. A login prompt, CAPTCHA,
+  401, 403, or access-control content is a terminal human-review outcome. The
+  system records only the profile refresh time, never profile contents.
 - The worker runs one configured browser source per Redis lease. It sets bounded
   page and action timeouts, never waits indefinitely for `networkidle`, and
   closes page, context, and browser resources in `finally` paths.
@@ -76,9 +80,9 @@ selectors and business mapping remain inside exactly one adapter per website.
 ## Implementation Order
 
 1. Build and locally validate the generic dedicated-Edge runtime.
-2. Add profile isolation, manual-login operations, login-loss detection, and
-   redacted failure artifacts.
-3. Reconfirm the source card's robots and authorization gate, then implement
+2. Add profile isolation, no-login failure handling, and redacted failure
+   artifacts. Keep P4-02 manual-login operations optional and source-specific.
+3. Reconfirm the source card's public-visible terms, robots, and cadence gate, then implement
    the single `sporttery_zqspf` browser adapter with a redacted fixture.
 4. Run local end-to-end acceptance followed by a 24-hour pre-production run.
 
@@ -90,7 +94,9 @@ deduplication, update, retry, and rate-limit tests using redacted local
 fixtures. A disposable PostgreSQL check must prove idempotent persistence.
 
 Before any P3-04 source implementation, the source card must contain readable
-robots guidance, an external authorization record, and an approved minimum
-polling interval. A selected browser-monitor transport does not satisfy those
-source-specific conditions by itself. A 24-hour run is a local pre-production
-acceptance check only; it is not a production deployment.
+robots guidance, a published terms conclusion for public-visible monitoring,
+and an approved minimum polling interval. An external authorization record is
+required when those published rules require it or are unclear. A selected
+browser-monitor transport does not satisfy those source-specific conditions by
+itself. A 24-hour run is a local pre-production acceptance check only; it is
+not a production deployment.
