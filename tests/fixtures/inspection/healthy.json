@@ -1,0 +1,19 @@
+{
+  "window_end": "2026-07-13T08:00:00+08:00",
+  "sources": [
+    {
+      "source_id": "demo_api",
+      "runs_succeeded": 24,
+      "runs_failed": 0,
+      "last_success_at": "2026-07-13T07:59:00+08:00",
+      "average_duration_seconds": 0.25,
+      "p95_duration_seconds": 0.5,
+      "item_count": 12,
+      "baseline_item_count": 12,
+      "parse_failure_snapshot_count": 0,
+      "http_statuses": {"401": 0, "403": 0, "429": 0},
+      "queue_depth": 0,
+      "circuit_breaker_open": false
+    }
+  ]
+}
