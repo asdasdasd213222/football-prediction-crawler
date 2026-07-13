@@ -10,7 +10,7 @@ daily browser session.
 
 This design covers the runtime path required before implementing the
 `sporttery_zqspf` adapter. It does not authorize production deployment, bypass
-login, CAPTCHA, robots guidance, rate limits, or access controls.
+login, CAPTCHA, source enablement review, rate limits, or access controls.
 
 ## Decision
 
@@ -82,7 +82,7 @@ selectors and business mapping remain inside exactly one adapter per website.
 1. Build and locally validate the generic dedicated-Edge runtime.
 2. Add profile isolation, no-login failure handling, and redacted failure
    artifacts. Keep P4-02 manual-login operations optional and source-specific.
-3. Reconfirm the source card's public-visible terms, robots, and cadence gate, then implement
+3. Reconfirm the external source enablement status and approved cadence, then implement
    the single `sporttery_zqspf` browser adapter with a redacted fixture.
 4. Run local end-to-end acceptance followed by a 24-hour pre-production run.
 
@@ -93,10 +93,8 @@ redaction tests. The source adapter must pass normal, empty, structural-change,
 deduplication, update, retry, and rate-limit tests using redacted local
 fixtures. A disposable PostgreSQL check must prove idempotent persistence.
 
-Before any P3-04 source implementation, the source card must contain readable
-robots guidance, a published terms conclusion for public-visible monitoring,
-and an approved minimum polling interval. An external authorization record is
-required when those published rules require it or are unclear. A selected
-browser-monitor transport does not satisfy those source-specific conditions by
-itself. A 24-hour run is a local pre-production acceptance check only; it is
-not a production deployment.
+Before any P3-04 source implementation, the source card must contain an
+approved external enablement status, a non-secret external reference, and an
+approved minimum polling interval. A selected browser-monitor transport does
+not satisfy those source-specific conditions by itself. A 24-hour run is a
+local pre-production acceptance check only; it is not a production deployment.

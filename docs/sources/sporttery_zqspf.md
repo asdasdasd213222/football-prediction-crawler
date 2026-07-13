@@ -6,8 +6,6 @@
 - **Target URL:** `https://www.sporttery.cn/jc/jsq/zqspf/index.html`
 - **Project owner consent:** The project owner authorized the project team to
   operate this repository and its dedicated browser workflow on 2026-07-11.
-  This does not constitute source operator or rights-holder authorization for
-  automated collection.
 - **Collection mode:** Public-visible page monitoring only. It must not log in,
   read session material, inspect network traffic, or call hidden APIs.
 - **Scope:** Public竞彩足球足球胜平负与让球胜平负赛事和奖金信息 only.
@@ -25,7 +23,7 @@
   access-control prompt, or account-only content stops collection and requires
   a new source review; P4-02 does not make those prompts permissible.
 - **Rendering:** Browser-monitored rendering is the proposed transport for the
-  visible page workflow. It does not establish source authorization.
+  visible page workflow and reads only configured visible fields.
 - **Rate limit:** No published numeric limit identified. Use the configured
   per-source limiter and the 60-second minimum until written limits are found.
 
@@ -45,36 +43,21 @@
 - **Fixture:** No response body is retained in this documentation task. A
   redacted, authorized fixture is required before any adapter implementation.
 
-## Compliance Review
+## External Enablement Status
 
-- **Terms:** The published user agreement states that site content may not be
-  copied or used for derivative works without prior authorization from the
-  operator or rights holder. Project owner consent is not evidence of that
-  source-side authorization. Therefore this source needs an external
-  authorization record before public-visible monitoring can be enabled.
-- **robots.txt:** Automatic retrieval did not return a readable policy during
-  this review. This remains a blocking manual verification point before the
-  source-specific P3-04 Adapter is enabled.
-- **Browser-monitor boundary:** Selecting the browser monitor as the data
-  transport does not waive robots guidance, terms, the authorization scope, or
-  rate limits. It changes *how* authorized data enters the project, not whether
-  this particular source may be automated.
-- **Production eligibility:** The generic P4-01 browser runtime is locally
-  accepted. The `sporttery_zqspf` Adapter remains **not approved** until robots
-  guidance, the external authorization record, and the approved cadence are
-  reconfirmed.
+- **Status:** Not approved for P3-04 implementation or production enablement.
+- **External review reference:** Not recorded.
+- **Card boundary:** This source card intentionally excludes source-policy
+  text, rule conclusions, authorization details, and reviewer rationale. Those
+  records, if any, remain outside the repository.
 
-## P3-04 Approval Intake
+## P3-04 Enablement Record
 
-P3-04 remains blocked until every item in
-`docs/operations/source-approval-intake.md` has a non-sensitive human
-confirmation. For a source whose published terms and robots guidance clearly
-permit public-visible monitoring, an external authorization record is not
-required. This source's current terms record requires one.
-
-Do not place authorization documents, account details, cookies, tokens, or a
-browser profile in Git. Store any underlying authorization record outside the
-repository and provide only its reference, issuer, scope, and review date.
+P3-04 remains blocked until an authorized human records an approved status in
+`docs/operations/source-approval-intake.md`. The repository stores only the
+status, review date, allowed cadence, and an external reference; it does not
+store underlying review material, account details, cookies, tokens, or browser
+profile data.
 
 ## Alert Thresholds
 
@@ -88,5 +71,4 @@ repository and provide only its reference, issuer, scope, and review date.
 
 - The official target page is indexed as “足球胜平负” and exposes the listed
   public match and odds categories.
-- The site user agreement includes copyright and authorization restrictions.
 - Review date: 2026-07-11 (Beijing time).
