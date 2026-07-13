@@ -502,65 +502,65 @@ sources:
 
 ## P5-01 结构化日志
 
-- [ ] 使用 JSON 日志。
-- [ ] 每条运行日志包含 `source_id`。
-- [ ] 包含 `crawl_run_id`。
-- [ ] 包含 `task_id`。
-- [ ] 包含耗时、状态和条目数。
-- [ ] 对 Authorization、Cookie、Token 和个人信息脱敏。
-- [ ] 错误日志包含异常类型但不泄露凭证。
-- [ ] 配置日志轮转和保留期。
+- [x] 使用 JSON 日志。
+- [x] 每条运行日志包含 `source_id`。
+- [x] 包含 `crawl_run_id`。
+- [x] 包含 `task_id`。
+- [x] 包含耗时、状态和条目数。
+- [x] 对 Authorization、Cookie、Token 和个人信息脱敏。
+- [x] 错误日志包含异常类型但不泄露凭证。
+- [x] 配置日志轮转和保留期。
 
 ### 验收
 
-- [ ] 能通过一个运行 ID 找到完整链路。
-- [ ] 自动化测试检查敏感字段不会进入日志。
-- [ ] 日志磁盘不会无限增长。
+- [x] 能通过一个运行 ID 找到完整链路。
+- [x] 自动化测试检查敏感字段不会进入日志。
+- [x] 日志磁盘不会无限增长。
 
 ---
 
 ## P5-02 Prometheus 指标
 
-- [ ] `crawler_run_total`
-- [ ] `crawler_run_failed_total`
-- [ ] `crawler_run_duration_seconds`
-- [ ] `crawler_items_found`
-- [ ] `crawler_items_created`
-- [ ] `crawler_items_updated`
-- [ ] `crawler_http_status_total`
-- [ ] `crawler_queue_depth`
-- [ ] `crawler_last_success_timestamp`
-- [ ] `crawler_parse_error_total`
-- [ ] `crawler_lock_skip_total`
-- [ ] `crawler_circuit_breaker_state`
+- [x] `crawler_run_total`
+- [x] `crawler_run_failed_total`
+- [x] `crawler_run_duration_seconds`
+- [x] `crawler_items_found`
+- [x] `crawler_items_created`
+- [x] `crawler_items_updated`
+- [x] `crawler_http_status_total`
+- [x] `crawler_queue_depth`
+- [x] `crawler_last_success_timestamp`
+- [x] `crawler_parse_error_total`
+- [x] `crawler_lock_skip_total`
+- [x] `crawler_circuit_breaker_state`
 
 ### 验收
 
-- [ ] 指标可被 Prometheus 抓取。
-- [ ] 标签基数受控，不使用 URL 或业务 ID 作为高基数标签。
+- [x] 指标可被 Prometheus 抓取。
+- [x] 标签基数受控，不使用 URL 或业务 ID 作为高基数标签。
 - [ ] Grafana 可显示每个网站成功率和最后成功时间。
 
 ---
 
 ## P5-03 告警规则
 
-- [ ] 连续失败告警。
-- [ ] 超过预期时间没有成功抓取告警。
-- [ ] 数据量从正常值突然变为零告警。
-- [ ] 数据量异常波动告警。
-- [ ] 解析字段缺失率异常告警。
-- [ ] 401、403、429 和 CAPTCHA 告警。
-- [ ] 队列积压告警。
-- [ ] Worker 离线告警。
-- [ ] PostgreSQL 和 Redis 不可用告警。
-- [ ] 磁盘空间告警。
-- [ ] 告警恢复通知。
+- [x] 连续失败告警。
+- [x] 超过预期时间没有成功抓取告警。
+- [x] 数据量从正常值突然变为零告警。
+- [x] 数据量异常波动告警。
+- [x] 解析字段缺失率异常告警。
+- [x] 401、403、429 和 CAPTCHA 告警。
+- [x] 队列积压告警。
+- [x] Worker 离线告警。
+- [x] PostgreSQL 和 Redis 不可用告警。
+- [x] 磁盘空间告警。
+- [x] 告警恢复通知。
 
 ### 验收
 
-- [ ] 每条告警都可以通过测试场景触发。
-- [ ] 每条告警都附带 `source_id`、运行 ID 和排障链接。
-- [ ] 告警不会因一次偶发失败产生大量噪声。
+- [x] 每条告警都可以通过测试场景触发。
+- [x] 每条告警都附带 `source_id`、运行 ID 和排障链接。
+- [x] 告警不会因一次偶发失败产生大量噪声。
 
 ---
 

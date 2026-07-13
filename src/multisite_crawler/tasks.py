@@ -13,7 +13,8 @@ from pathlib import Path
 from time import monotonic, sleep
 from typing import Protocol, TypeVar, cast
 from urllib.parse import urlsplit
-from uuid import uuid4
+from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 from redis import Redis
 
@@ -36,25 +37,50 @@ from multisite_crawler.locking import (
     RedisLeaseStore,
     source_lock_key,
 )
+from multisite_crawler.metrics import MetricsRedis, RedisMetricsStore
 from multisite_crawler.observability import (
+    LoggingSettings,
     RunContext,
     RunEvent,
     RunOutcome,
+    configure_json_logging,
     emit_run_event,
 )
 from multisite_crawler.queueing import create_celery_app
 
 celery_app = create_celery_app()
-LOGGER = logging.getLogger(__name__)
+LOGGER = configure_json_logging(
+    __name__,
+    LoggingSettings.from_environment(
+        os.environ,
+        repository_root=Path(__file__).resolve().parents[2],
+    ),
+)
 LOCK_TTL_SECONDS = 90
 PROBE_URL_ENVIRONMENT_VARIABLE = "BROWSER_RUNTIME_PROBE_URL"
 T = TypeVar("T")
+BEIJING = ZoneInfo("Asia/Shanghai")
 
 
 class BrowserRuntime(Protocol):
     """Runtime boundary used by generic browser operations."""
 
     def run(self, operation: Callable[[BrowserPage], T]) -> T: ...
+
+
+class MetricsRecorder(Protocol):
+    """Minimal terminal run metric boundary for task-level instrumentation."""
+
+    def record_run(
+        self,
+        *,
+        source_id: str,
+        run_id: UUID,
+        outcome: RunOutcome,
+        duration_seconds: float,
+        item_count: int,
+        current: datetime,
+    ) -> None: ...
 
 
 class _ProbePage(Protocol):
@@ -78,6 +104,7 @@ def run_with_source_lease[T](
     renew_interval_seconds: float | None = None,
     event_logger: logging.Logger | None = None,
     task_id: str = "internal",
+    metrics_store: MetricsRecorder | None = None,
 ) -> T | LockOutcome:
     """Run one source operation only while its Redis lease is held."""
     logger = event_logger or LOGGER
@@ -93,8 +120,10 @@ def run_with_source_lease[T](
                 context,
                 RunOutcome.SKIPPED,
                 duration_seconds=monotonic() - started_at,
+                item_count=0,
             ),
         )
+        _record_terminal_metric(metrics_store, context, RunOutcome.SKIPPED, started_at)
         return LockOutcome.SKIPPED_OVERLAP
     heartbeat = LeaseHeartbeat(
         lease,
@@ -112,7 +141,11 @@ def run_with_source_lease[T](
                 context,
                 RunOutcome.SUCCEEDED,
                 duration_seconds=monotonic() - started_at,
+                item_count=0,
             ),
+        )
+        _record_terminal_metric(
+            metrics_store, context, RunOutcome.SUCCEEDED, started_at
         )
         return result
     except BaseException as error:
@@ -123,9 +156,11 @@ def run_with_source_lease[T](
                 context,
                 RunOutcome.FAILED,
                 duration_seconds=monotonic() - started_at,
+                item_count=0,
                 exception=error,
             ),
         )
+        _record_terminal_metric(metrics_store, context, RunOutcome.FAILED, started_at)
         raise
     finally:
         heartbeat.stop()
@@ -170,6 +205,29 @@ def run_browser_runtime_probe(
 def _redis_lease_store() -> RedisLeaseStore:
     redis_client = Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
     return cast(RedisLeaseStore, redis_client)
+
+
+def _metrics_store() -> MetricsRecorder:
+    redis_client = Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+    return RedisMetricsStore(cast(MetricsRedis, redis_client))
+
+
+def _record_terminal_metric(
+    metrics_store: MetricsRecorder | None,
+    context: RunContext,
+    outcome: RunOutcome,
+    started_at: float,
+) -> None:
+    if metrics_store is None:
+        return
+    metrics_store.record_run(
+        source_id=context.source_id,
+        run_id=context.crawl_run_id,
+        outcome=outcome,
+        duration_seconds=monotonic() - started_at,
+        item_count=0,
+        current=datetime.now(BEIJING),
+    )
 
 
 def _browser_runtime(
@@ -218,7 +276,12 @@ def _probe_url_from_environment() -> str:
 def run_http_task(self: object, source_id: str) -> str:
     """Queue-safe HTTP task placeholder; source work arrives in a later task."""
     return str(
-        run_with_source_lease(_redis_lease_store(), source_id, lambda: source_id)
+        run_with_source_lease(
+            _redis_lease_store(),
+            source_id,
+            lambda: source_id,
+            metrics_store=_metrics_store(),
+        )
     )
 
 
@@ -231,7 +294,12 @@ def run_http_task(self: object, source_id: str) -> str:
 def run_browser_task(self: object, source_id: str) -> str:
     """Queue-safe browser task placeholder; browser work arrives later."""
     return str(
-        run_with_source_lease(_redis_lease_store(), source_id, lambda: source_id)
+        run_with_source_lease(
+            _redis_lease_store(),
+            source_id,
+            lambda: source_id,
+            metrics_store=_metrics_store(),
+        )
     )
 
 

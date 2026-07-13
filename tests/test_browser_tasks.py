@@ -67,6 +67,24 @@ class MemorySessionStore:
         self.values[key] = value
 
 
+class MemoryMetricsStore:
+    def __init__(self) -> None:
+        self.outcomes: list[tuple[str, str, int]] = []
+
+    def record_run(
+        self,
+        *,
+        source_id: str,
+        run_id: object,
+        outcome: object,
+        duration_seconds: float,
+        item_count: int,
+        current: datetime,
+    ) -> None:
+        del run_id, duration_seconds, current
+        self.outcomes.append((source_id, str(outcome), item_count))
+
+
 class FakeRuntime:
     def __init__(self) -> None:
         self.calls = 0
@@ -119,7 +137,24 @@ def test_source_lease_emits_traceable_safe_run_event() -> None:
     assert payload["source_id"] == "demo"
     assert payload["task_id"] == "task-local"
     assert payload["outcome"] == "succeeded"
+    assert payload["item_count"] == 0
     assert "crawl_run_id" in payload
+
+
+def test_source_lease_records_terminal_metric_outcome() -> None:
+    metrics = MemoryMetricsStore()
+
+    assert (
+        run_with_source_lease(
+            MemoryRedis(),
+            "demo",
+            lambda: "ok",
+            metrics_store=metrics,
+        )
+        == "ok"
+    )
+
+    assert metrics.outcomes == [("demo", "succeeded", 0)]
 
 
 def test_browser_operation_skips_when_the_existing_source_lease_is_held() -> None:

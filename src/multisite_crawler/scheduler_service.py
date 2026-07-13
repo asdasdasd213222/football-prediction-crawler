@@ -16,15 +16,23 @@ from redis import Redis
 from multisite_crawler.config import CrawlerConfig, QueueName, load_config
 from multisite_crawler.database import beijing_now
 from multisite_crawler.observability import (
+    LoggingSettings,
     RunContext,
     RunEvent,
     RunOutcome,
+    configure_json_logging,
     emit_run_event,
 )
 from multisite_crawler.scheduler import SchedulerService, SchedulerStore
 from multisite_crawler.tasks import run_browser_task, run_http_task
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = configure_json_logging(
+    __name__,
+    LoggingSettings.from_environment(
+        os.environ,
+        repository_root=Path(__file__).resolve().parents[2],
+    ),
+)
 
 
 @dataclass(frozen=True)
